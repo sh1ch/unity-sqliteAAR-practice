@@ -9,67 +9,43 @@ public class Test : MonoBehaviour
 {
     public Text OwnerObject;
     private List<string> Charactors = new List<string>();
+    private string ExceptionText = "";
 
     // Start is called before the first frame update
     void Start()
     {
+        var test = GameObject.Find("SelectButton").GetComponent<TestButton>();
+
+        test.OccurredSelect += (owner, args) => 
+        {
+            Debug.Log($"Called OccurredSelect Event at {nameof(Test)} Class.");
+
+            var charactors = SqlTester.Select();
+
+            AddCharactors(charactors, true);
+        };
+
         try
         {
-            var fileName = "sample.db";
+            var charactors = SqlTester.Select();
 
-
-            var db = new SqliteDatabase(fileName);
-            var query = db.ExecuteQuery("SELECT * FROM charactors");
-
-            foreach (var row in query.Rows)
-            {
-                var id = row["id"];
-                var name = row["name"];
-                var data1 = row["data1"];
-                var data2 = row["data2"];
-
-                var text = $"ID:{id}, Name:{name}, DATA1:{data1}, DATA2:{data2}";
-
-                Charactors.Add(text);
-            }
-
-        } 
+            AddCharactors(charactors, true);
+        }
         catch (Exception ex)
         {
-            Charactors.Add(ex.Message);
+            ExceptionText = ex.Message;
         }
-    }
-
-    private IEnumerator InitializeDB(string fileName)
-    {
-        var mementoDB = $"{Application.streamingAssetsPath}/{fileName}";
-        var gameDB = $"{Application.persistentDataPath}/{fileName}";
-
-        var www = UnityWebRequest.Get(mementoDB);
-
-        yield return www.SendWebRequest();
-
-        if (!www.isNetworkError)
-        {
-            if (!System.IO.File.Exists(gameDB))
-            {
-                System.IO.File.WriteAllBytes(gameDB, www.downloadHandler.data);
-            }
-        }
-        else
-        {
-            throw new Exception(www.error);
-        }
-        
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (OwnerObject != null && Charactors.Count > 0)
+        if (OwnerObject == null) return;
+
+        string text = "";
+
+        if (ExceptionText == "")
         {
-            string text = "";
-            
             if (Charactors.Count > 0)
             {
                 text = string.Join("\r\n", Charactors);
@@ -78,8 +54,26 @@ public class Test : MonoBehaviour
             {
                 text = "キャラクターが存在しません";
             }
+        }
+        else
+        {
+            text = ExceptionText;
+        }
 
-            OwnerObject.text = text;
+        OwnerObject.text = text;
+
+    }
+
+    private void AddCharactors(IEnumerable<string> charactors, bool isReset)
+    {
+        if (isReset)
+        {
+            Charactors.Clear();
+        }
+
+        foreach (var chara in charactors)
+        {
+            Charactors.Add(chara);
         }
     }
 }
